@@ -1,7 +1,14 @@
-
 <?xml version="1.0" encoding="utf-8"?>
-<paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-files-path
-        name="invoices"
-        path="." />
-</paths>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:label="فاکتور ساز"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <!-- Activities and providers go here -->
+
+    </application>
+
+</manifest>
