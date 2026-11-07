@@ -17,9 +17,7 @@ import java.util.*;
 
 public class MainActivity extends Activity {
     DB db;
-    EditText customer, phone, description, qty, price, discount, notes;
-    TextView totalView;
-    LinearLayout root;
+    
     long lastId=-1;
     int bg=0xFFF4F6F8, primary=0xFF176B87;
 
