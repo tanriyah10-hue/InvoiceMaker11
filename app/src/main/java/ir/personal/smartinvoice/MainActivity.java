@@ -45,7 +45,9 @@ public class MainActivity extends Activity {
 
     private final int backgroundColor = 0xFFF4F6F8;
     private final int primaryColor = 0xFF176B87;
-
+private static final String COMPANY_NAME = " گروه فنی مهندسی ایمن سولار سيستم";
+private static final String COMPANY_ADDRESS = "ارومیه، آزادگان ۱،کوی۴";
+private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
     private class ItemRow {
         EditText description;
         EditText qty;
