@@ -43,11 +43,122 @@ class ItemRow {
     Button button(String s, Runnable r){ Button b=new Button(this); b.setText(s); b.setOnClickListener(v->r.run()); return b; }
     void base(String title){ root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(16),dp(12),dp(16),dp(16)); root.setBackgroundColor(bg); root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL); ScrollView sc=new ScrollView(this); sc.addView(root); setContentView(sc); TextView h=text(title,22,0xFF124D63); h.setGravity(Gravity.CENTER); root.addView(h); }
     void addField(String label, EditText e){ root.addView(text(label,14,0xFF34495E)); LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(50)); p.bottomMargin=dp(5); root.addView(e,p); }
-    void showForm(){
-        base("فاکتور ساز شخصی");
-        customer=field("نام مشتری"); phone=field("شماره تماس (اختیاری)"); description=field("شرح کالا یا خدمات"); qty=field("تعداد"); qty.setInputType(8194); qty.setText("1"); price=field("قیمت واحد به تومان"); price.setInputType(8194); discount=field("تخفیف به تومان"); discount.setInputType(8194); discount.setText("0"); notes=field("توضیحات (اختیاری)");
-        addField("نام مشتری",customer); addField("شماره تماس",phone); addField("شرح کالا یا خدمات",description); addField("تعداد",qty); addField("قیمت واحد (تومان)",price); addField("تخفیف (تومان)",discount); addField("توضیحات",notes);
-        totalView=text("مبلغ نهایی: ۰ تومان",19,primary); totalView.setGravity(Gravity.CENTER); root.addView(totalView);
+    void showForm() {
+    base("فاکتور ساز شخصی");
+
+    customer = field("نام مشتری");
+    phone = field("شماره تماس (اختیاری)");
+    notes = field("توضیحات (اختیاری)");
+
+    addField("نام مشتری", customer);
+    addField("شماره تماس", phone);
+
+    root.addView(text("کالاها و خدمات", 18, primary));
+
+    itemContainer = new LinearLayout(this);
+    itemContainer.setOrientation(LinearLayout.VERTICAL);
+    root.addView(itemContainer);
+
+    itemRows.clear();
+    addItemRow();
+
+    root.addView(button("＋ افزودن ردیف کالا یا خدمات", this::addItemRow));
+
+    totalView = text("مبلغ نهایی: ۰ تومان", 19, primary);
+    totalView.setGravity(Gravity.CENTER);
+    root.addView(totalView);
+
+    addField("توضیحات فاکتور", notes);
+
+    root.addView(button("محاسبه مبلغ", this::calculate));
+    root.addView(button("ذخیره فاکتور", this::save));
+    root.addView(button("فاکتورهای ذخیره‌شده", this::showList));
+
+    root.addView(text(
+            "اطلاعات در حافظهٔ همین گوشی ذخیره می‌شود. برای نگهداری بلندمدت از PDF خروجی بگیر.",
+            12, 0xFF666666
+    ));
+}
+
+void addItemRow() {
+    ItemRow row = new ItemRow();
+
+    row.card = new LinearLayout(this);
+    row.card.setOrientation(LinearLayout.VERTICAL);
+    row.card.setPadding(dp(10), dp(8), dp(10), dp(8));
+    row.card.setBackgroundColor(0xFFFFFFFF);
+
+    row.description = field("شرح کالا یا خدمات");
+
+    row.qty = field("تعداد");
+    row.qty.setInputType(8194);
+    row.qty.setText("1");
+
+    row.price = field("قیمت واحد (تومان)");
+    row.price.setInputType(8194);
+
+    row.discount = field("تخفیف این ردیف (تومان)");
+    row.discount.setInputType(8194);
+    row.discount.setText("0");
+
+    row.card.addView(text("ردیف " + (itemRows.size() + 1), 16, primary));
+    row.card.addView(row.description);
+    row.card.addView(row.qty);
+    row.card.addView(row.price);
+    row.card.addView(row.discount);
+
+    row.card.addView(button("حذف این ردیف", () -> {
+        if (itemRows.size() <= 1) {
+            toast("فاکتور باید حداقل یک ردیف داشته باشد");
+            return;
+        }
+
+        itemContainer.removeView(row.card);
+        itemRows.remove(row);
+        updateRowNumbers();
+        updateTotal();
+    }));
+
+    LinearLayout.LayoutParams params =
+            new LinearLayout.LayoutParams(-1, -2);
+    params.bottomMargin = dp(8);
+
+    itemContainer.addView(row.card, params);
+    itemRows.add(row);
+}
+
+void updateRowNumbers() {
+    for (int i = 0; i < itemRows.size(); i++) {
+        ItemRow row = itemRows.get(i);
+        TextView title = (TextView) row.card.getChildAt(0);
+        title.setText("ردیف " + (i + 1));
+    }
+}
+
+long rowAmount(ItemRow row) {
+    long q = number(row.qty);
+    long p = number(row.price);
+    long d = number(row.discount);
+    return Math.max(0, q * p - d);
+}
+
+long invoiceAmount() {
+    long total = 0;
+    for (ItemRow row : itemRows) {
+        total += rowAmount(row);
+    }
+    return total;
+}
+
+void updateTotal() {
+    if (totalView != null) {
+        totalView.setText(
+                "مبلغ نهایی: " + money(invoiceAmount()) + " تومان"
+        );
+    }
+}
+     
+ تومان",19,primary); totalView.setGravity(Gravity.CENTER); root.addView(totalView);
         root.addView(button("محاسبه مبلغ",()->calculate())); root.addView(button("ذخیره فاکتور",()->save())); root.addView(button("فاکتورهای ذخیره‌شده",()->showList()));
         root.addView(text("اطلاعات در حافظهٔ همین گوشی ذخیره می‌شود. برای نگهداری بلندمدت، از فایل PDF خروجی بگیر.",12,0xFF666666));
     }
