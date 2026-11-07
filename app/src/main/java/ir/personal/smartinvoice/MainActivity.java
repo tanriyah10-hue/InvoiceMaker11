@@ -17,9 +17,16 @@ import java.util.*;
 
 public class MainActivity extends Activity {
     DB db;
-    EditText customer, phone, notes;
+  EditText customer, phone, notes;
 TextView totalView;
 LinearLayout root, itemContainer;
+final ArrayList<ItemRow> itemRows = new ArrayList<>();
+
+class ItemRow {
+    EditText description, qty, price, discount;
+    LinearLayout card;
+}
+ itemContainer;
 final ArrayList<ItemRow> itemRows = new ArrayList<>();
 
 class ItemRow {
