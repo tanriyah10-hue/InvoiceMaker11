@@ -2,6 +2,7 @@ package ir.personal.smartinvoice;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -17,10 +18,12 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,26 +31,40 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
+    private static final String COMPANY_NAME =
+            "گروه فنی مهندسی ایمن سولار سيستم";
+    private static final String COMPANY_ADDRESS =
+            "ارومیه، آزادگان ۱، کوی ۴";
+    private static final String COMPANY_PHONE =
+            "۰۹۱۴ ۶۰۷۷ ۶۲۶";
+
+    private static final String TYPE_INVOICE =
+            "فاکتور فروش کالا/خدمات";
+    private static final String TYPE_PREINVOICE =
+            "پیش‌فاکتور فروش کالا/خدمات";
+
     private DB db;
 
     private EditText customer;
     private EditText phone;
     private EditText notes;
     private TextView totalView;
+    private TextView issueDateView;
     private LinearLayout root;
     private LinearLayout itemContainer;
+    private Spinner documentTypeSpinner;
 
+    private Calendar issueDate = Calendar.getInstance();
     private final ArrayList<ItemRow> itemRows = new ArrayList<>();
 
     private final int backgroundColor = 0xFFF4F6F8;
     private final int primaryColor = 0xFF176B87;
-private static final String COMPANY_NAME = " گروه فنی مهندسی ایمن سولار سيستم";
-private static final String COMPANY_ADDRESS = "ارومیه، آزادگان ۱،کوی۴";
-private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
+
     private class ItemRow {
         EditText description;
         EditText qty;
@@ -68,7 +85,9 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
     }
 
     private int dp(float value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+        return (int) (
+                value * getResources().getDisplayMetrics().density + 0.5f
+        );
     }
 
     private TextView text(String value, int size, int color) {
@@ -131,12 +150,43 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
     private void showForm() {
         base("فاکتور ساز شخصی");
 
+        root.addView(text("نوع سند", 14, 0xFF34495E));
+
+        String[] documentTypes = {
+                TYPE_INVOICE,
+                TYPE_PREINVOICE
+        };
+
+        documentTypeSpinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                documentTypes
+        );
+        adapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item
+        );
+        documentTypeSpinner.setAdapter(adapter);
+        root.addView(documentTypeSpinner);
+
+        root.addView(text("تاریخ صدور", 14, 0xFF34495E));
+
+        issueDateView = text("", 16, primaryColor);
+        issueDateView.setGravity(Gravity.CENTER);
+        root.addView(issueDateView);
+        updateIssueDateLabel();
+
+        root.addView(button(
+                "انتخاب تاریخ صدور",
+                this::showDatePicker
+        ));
+
         customer = field("نام مشتری");
-        phone = field("شماره تماس (اختیاری)");
+        phone = field("شماره تماس مشتری (اختیاری)");
         notes = field("توضیحات فاکتور (اختیاری)");
 
         addField("نام مشتری", customer);
-        addField("شماره تماس", phone);
+        addField("شماره تماس مشتری", phone);
 
         root.addView(text("کالاها و خدمات", 18, primaryColor));
 
@@ -160,13 +210,69 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
 
         root.addView(button("محاسبه مبلغ", this::calculate));
         root.addView(button("ذخیره فاکتور", this::save));
-        root.addView(button("فاکتورهای ذخیره‌شده", this::showList));
+        root.addView(button("فاکتورها و پیش‌فاکتورهای ذخیره‌شده", this::showList));
 
         root.addView(text(
                 "اطلاعات در همین گوشی ذخیره می‌شود. برای نگهداری بلندمدت PDF بگیر.",
                 12,
                 0xFF666666
         ));
+    }
+
+    private void showDatePicker() {
+        int year = issueDate.get(Calendar.YEAR);
+        int month = issueDate.get(Calendar.MONTH);
+        int day = issueDate.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog dialog = new DatePickerDialog(
+                this,
+                (picker, selectedYear, selectedMonth, selectedDay) -> {
+                    issueDate.set(Calendar.YEAR, selectedYear);
+                    issueDate.set(Calendar.MONTH, selectedMonth);
+                    issueDate.set(Calendar.DAY_OF_MONTH, selectedDay);
+                    issueDate.set(Calendar.HOUR_OF_DAY, 12);
+                    issueDate.set(Calendar.MINUTE, 0);
+                    issueDate.set(Calendar.SECOND, 0);
+                    issueDate.set(Calendar.MILLISECOND, 0);
+                    updateIssueDateLabel();
+                },
+                year,
+                month,
+                day
+        );
+
+        dialog.show();
+    }
+
+    private void updateIssueDateLabel() {
+        if (issueDateView != null) {
+            issueDateView.setText(
+                    "تاریخ انتخاب‌شده: " + displayDate(issueDate)
+            );
+        }
+    }
+
+    private String displayDate(Calendar date) {
+        return new SimpleDateFormat(
+                "yyyy/MM/dd",
+                Locale.US
+        ).format(date.getTime());
+    }
+
+    private String databaseDate(Calendar date) {
+        return new SimpleDateFormat(
+                "yyyy-MM-dd",
+                Locale.US
+        ).format(date.getTime());
+    }
+
+    private String selectedDocumentType() {
+        if (documentTypeSpinner == null
+                || documentTypeSpinner.getSelectedItem() == null) {
+            return TYPE_INVOICE;
+        }
+
+        return documentTypeSpinner.getSelectedItem().toString();
     }
 
     private void addItemRow() {
@@ -190,7 +296,9 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
         row.discount.setInputType(8194);
         row.discount.setText("0");
 
-        row.card.addView(text("ردیف " + (itemRows.size() + 1), 16, primaryColor));
+        row.card.addView(
+                text("ردیف " + (itemRows.size() + 1), 16, primaryColor)
+        );
         row.card.addView(row.description);
         row.card.addView(row.qty);
         row.card.addView(row.price);
@@ -329,15 +437,20 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
         invoice.put("customer", customerName);
         invoice.put("phone", phone.getText().toString().trim());
 
-        // این ستون‌ها برای سازگاری فاکتورهای نسخهٔ قبلی حفظ شده‌اند.
+        // این ستون‌های قدیمی برای حفظ سازگاری فاکتورهای قبلی باقی مانده‌اند.
         ItemRow first = itemRows.get(0);
-        invoice.put("description", first.description.getText().toString().trim());
+        invoice.put(
+                "description",
+                first.description.getText().toString().trim()
+        );
         invoice.put("qty", number(first.qty));
         invoice.put("price", number(first.price));
         invoice.put("discount", number(first.discount));
         invoice.put("notes", notes.getText().toString().trim());
         invoice.put("total", invoiceAmount());
         invoice.put("created", System.currentTimeMillis());
+        invoice.put("document_type", selectedDocumentType());
+        invoice.put("issue_date", databaseDate(issueDate));
 
         long invoiceId = -1;
         boolean saved = false;
@@ -363,7 +476,7 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
             sql.setTransactionSuccessful();
             saved = true;
         } catch (Exception e) {
-            toast("ذخیره فاکتور انجام نشد: " + e.getMessage());
+            toast("ذخیره سند انجام نشد: " + e.getMessage());
         } finally {
             sql.endTransaction();
         }
@@ -374,7 +487,7 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
 
             long savedId = invoiceId;
             new AlertDialog.Builder(this)
-                    .setMessage("فاکتور ذخیره شد. می‌خواهی PDF آن را بسازی؟")
+                    .setMessage("سند ذخیره شد. می‌خواهی PDF آن را بسازی؟")
                     .setPositiveButton(
                             "ساخت PDF",
                             (dialog, which) -> makePdf(savedId)
@@ -385,21 +498,26 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
     }
 
     private void showList() {
-        base("فاکتورهای ذخیره‌شده");
+        base("فاکتورها و پیش‌فاکتورهای ذخیره‌شده");
 
         root.addView(button(
-                "بازگشت به فرم ثبت فاکتور",
+                "بازگشت به فرم ثبت",
                 this::showForm
         ));
 
         Cursor cursor = db.getReadableDatabase().rawQuery(
-                "SELECT id, customer, total, created " +
+                "SELECT id, customer, total, created, " +
+                        "document_type, issue_date " +
                         "FROM invoices ORDER BY id DESC",
                 null
         );
 
         if (cursor.getCount() == 0) {
-            root.addView(text("هنوز فاکتوری ذخیره نشده است.", 16, 0xFF555555));
+            root.addView(text(
+                    "هنوز سندی ذخیره نشده است.",
+                    16,
+                    0xFF555555
+            ));
         }
 
         while (cursor.moveToNext()) {
@@ -407,35 +525,49 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
             String customerName = cursor.getString(1);
             long total = cursor.getLong(2);
             long created = cursor.getLong(3);
+            String documentType = cursor.getString(4);
+            String issueDateText = cursor.getString(5);
+
+            if (documentType == null || documentType.trim().isEmpty()) {
+                documentType = TYPE_INVOICE;
+            }
+
+            if (issueDateText == null || issueDateText.trim().isEmpty()) {
+                issueDateText = dateFromTimestamp(created);
+            } else {
+                issueDateText = issueDateText.replace('-', '/');
+            }
 
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(dp(10), dp(8), dp(10), dp(8));
             card.setBackgroundColor(Color.WHITE);
 
+            card.addView(text(documentType, 16, primaryColor));
             card.addView(text(
                     "مشتری: " + customerName,
-                    16,
+                    15,
                     0xFF222222
+            ));
+            card.addView(text(
+                    "تاریخ صدور: " + issueDateText,
+                    13,
+                    0xFF555555
             ));
             card.addView(text(
                     "مبلغ: " + money(total) + " تومان",
                     14,
                     primaryColor
             ));
-            card.addView(text(
-                    new SimpleDateFormat(
-                            "yyyy/MM/dd - HH:mm",
-                            Locale.getDefault()
-                    ).format(new Date(created)),
-                    12,
-                    0xFF666666
+
+            card.addView(button(
+                    "ساخت و اشتراک PDF",
+                    () -> makePdf(id)
             ));
 
-            card.addView(button("ساخت و اشتراک PDF", () -> makePdf(id)));
-            card.addView(button("حذف فاکتور", () ->
+            card.addView(button("حذف سند", () ->
                     new AlertDialog.Builder(this)
-                            .setMessage("این فاکتور حذف شود؟")
+                            .setMessage("این سند حذف شود؟")
                             .setPositiveButton("حذف", (dialog, which) -> {
                                 db.delete(id);
                                 showList();
@@ -456,16 +588,24 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
         cursor.close();
     }
 
+    private String dateFromTimestamp(long timestamp) {
+        return new SimpleDateFormat(
+                "yyyy/MM/dd",
+                Locale.US
+        ).format(new Date(timestamp));
+    }
+
     private void makePdf(long id) {
         Cursor invoiceCursor = db.getReadableDatabase().rawQuery(
-                "SELECT customer, phone, notes, total, created " +
+                "SELECT customer, phone, notes, total, created, " +
+                        "document_type, issue_date " +
                         "FROM invoices WHERE id=?",
                 new String[]{String.valueOf(id)}
         );
 
         if (!invoiceCursor.moveToFirst()) {
             invoiceCursor.close();
-            toast("فاکتور پیدا نشد");
+            toast("سند پیدا نشد");
             return;
         }
 
@@ -474,7 +614,19 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
         String invoiceNotes = invoiceCursor.getString(2);
         long total = invoiceCursor.getLong(3);
         long created = invoiceCursor.getLong(4);
+        String documentType = invoiceCursor.getString(5);
+        String issueDateText = invoiceCursor.getString(6);
         invoiceCursor.close();
+
+        if (documentType == null || documentType.trim().isEmpty()) {
+            documentType = TYPE_INVOICE;
+        }
+
+        if (issueDateText == null || issueDateText.trim().isEmpty()) {
+            issueDateText = dateFromTimestamp(created);
+        } else {
+            issueDateText = issueDateText.replace('-', '/');
+        }
 
         PdfDocument pdf = new PdfDocument();
 
@@ -483,12 +635,17 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
                     pdf,
                     customerName,
                     phoneNumber,
+                    documentType,
+                    issueDateText,
                     created
             );
 
+            writer.centerLine(documentType);
+
             Cursor items = db.getReadableDatabase().rawQuery(
                     "SELECT description, qty, price, discount " +
-                            "FROM invoice_items WHERE invoice_id=? ORDER BY id",
+                            "FROM invoice_items " +
+                            "WHERE invoice_id=? ORDER BY id",
                     new String[]{String.valueOf(id)}
             );
 
@@ -506,26 +663,37 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
                                 " | قیمت واحد: " + money(price) +
                                 " | تخفیف: " + money(discount)
                 );
-                writer.line("مبلغ این ردیف: " + money(amount) + " تومان");
+                writer.line(
+                        "مبلغ این ردیف: " + money(amount) + " تومان"
+                );
                 writer.line("");
                 index++;
             }
             items.close();
 
-            writer.line("مبلغ نهایی: " + money(total) + " تومان");
+            writer.centerLine(documentType);
+            writer.centerLine(
+                    "مبلغ نهایی: " + money(total) + " تومان"
+            );
 
-            if (invoiceNotes != null && !invoiceNotes.trim().isEmpty()) {
+            if (invoiceNotes != null
+                    && !invoiceNotes.trim().isEmpty()) {
                 writer.line("توضیحات: " + invoiceNotes);
             }
 
             writer.finish();
 
-            File directory = new File(getExternalFilesDir(null), "Invoices");
+            File directory = new File(
+                    getExternalFilesDir(null),
+                    "Invoices"
+            );
+
             if (!directory.exists() && !directory.mkdirs()) {
                 throw new Exception("ساخت پوشهٔ PDF ناموفق بود");
             }
 
             File file = new File(directory, "invoice-" + id + ".pdf");
+
             try (FileOutputStream output = new FileOutputStream(file)) {
                 pdf.writeTo(output);
             }
@@ -541,7 +709,10 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
             send.putExtra(Intent.EXTRA_STREAM, uri);
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-            startActivity(Intent.createChooser(send, "اشتراک‌گذاری PDF"));
+            startActivity(Intent.createChooser(
+                    send,
+                    "اشتراک‌گذاری PDF"
+            ));
         } catch (Exception e) {
             toast("ساخت PDF انجام نشد: " + e.getMessage());
         } finally {
@@ -552,10 +723,14 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
     private class PdfPageWriter {
         private final PdfDocument pdf;
         private final String customerName;
-        private final String phoneNumber;
+        private final String customerPhone;
+        private final String documentType;
+        private final String issueDateText;
         private final long created;
 
-        private final Paint paint = new Paint();
+        private final Paint paint =
+                new Paint(Paint.ANTI_ALIAS_FLAG);
+
         private PdfDocument.Page page;
         private Canvas canvas;
         private int pageNumber = 0;
@@ -564,12 +739,16 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
         PdfPageWriter(
                 PdfDocument pdf,
                 String customerName,
-                String phoneNumber,
+                String customerPhone,
+                String documentType,
+                String issueDateText,
                 long created
         ) {
             this.pdf = pdf;
             this.customerName = customerName;
-            this.phoneNumber = phoneNumber;
+            this.customerPhone = customerPhone;
+            this.documentType = documentType;
+            this.issueDateText = issueDateText;
             this.created = created;
             newPage();
         }
@@ -580,45 +759,154 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
             }
 
             pageNumber++;
+
             PdfDocument.PageInfo info =
-                    new PdfDocument.PageInfo.Builder(595, 842, pageNumber)
-                            .create();
+                    new PdfDocument.PageInfo.Builder(
+                            595,
+                            842,
+                            pageNumber
+                    ).create();
 
             page = pdf.startPage(info);
             canvas = page.getCanvas();
 
+            // کادر دور تمام محتوای این صفحهٔ PDF
             paint.setColor(Color.BLACK);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(1.5f);
+            canvas.drawRect(28, 28, 567, 814, paint);
+
+            paint.setStyle(Paint.Style.FILL);
             paint.setTextAlign(Paint.Align.RIGHT);
+            paint.setColor(Color.BLACK);
+
             paint.setTextSize(18);
+            canvas.drawText(COMPANY_NAME, 548, 62, paint);
 
-            canvas.drawText("فاکتور کالا و خدمات", 560, 60, paint);
-
-            paint.setTextSize(13);
-            canvas.drawText("مشتری: " + customerName, 560, 105, paint);
+            paint.setTextSize(12);
             canvas.drawText(
-                    "تلفن: " + (phoneNumber == null ? "" : phoneNumber),
-                    560,
-                    135,
+                    "آدرس: " + COMPANY_ADDRESS,
+                    548,
+                    88,
+                    paint
+            );
+            canvas.drawText(
+                    "تلفن شرکت: " + COMPANY_PHONE,
+                    548,
+                    111,
                     paint
             );
 
-            String date = new SimpleDateFormat(
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTextSize(17);
+            canvas.drawText(documentType, 297, 145, paint);
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(1);
+            canvas.drawLine(45, 160, 550, 160, paint);
+            paint.setStyle(Paint.Style.FILL);
+
+            paint.setTextAlign(Paint.Align.RIGHT);
+            paint.setTextSize(12);
+            canvas.drawText(
+                    "مشتری: " + customerName,
+                    548,
+                    188,
+                    paint
+            );
+            canvas.drawText(
+                    "تلفن مشتری: " +
+                            (customerPhone == null ? "" : customerPhone),
+                    548,
+                    212,
+                    paint
+            );
+            canvas.drawText(
+                    "تاریخ صدور: " + issueDateText,
+                    548,
+                    236,
+                    paint
+            );
+
+            String createdText = new SimpleDateFormat(
                     "yyyy/MM/dd - HH:mm",
-                    Locale.getDefault()
+                    Locale.US
             ).format(new Date(created));
 
-            canvas.drawText("تاریخ: " + date, 560, 165, paint);
-            y = 210;
+            canvas.drawText(
+                    "زمان ثبت: " + createdText,
+                    548,
+                    260,
+                    paint
+            );
+
+            paint.setStyle(Paint.Style.STROKE);
+            canvas.drawLine(45, 274, 550, 274, paint);
+            paint.setStyle(Paint.Style.FILL);
+
+            y = 300;
         }
 
         void line(String value) {
-            if (y > 780) {
-                newPage();
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(12);
+            paint.setTextAlign(Paint.Align.RIGHT);
+            paint.setStyle(Paint.Style.FILL);
+
+            // شکستن خط‌های بلند تا نوشته داخل کادر بماند.
+            String remaining = value == null ? "" : value;
+            float maxWidth = 490;
+
+            if (remaining.isEmpty()) {
+                ensureSpace();
+                y += 18;
+                return;
             }
 
-            paint.setTextSize(12);
-            canvas.drawText(value, 560, y, paint);
-            y += 28;
+            while (!remaining.isEmpty()) {
+                int split = remaining.length();
+
+                while (split > 1
+                        && paint.measureText(remaining, 0, split) > maxWidth) {
+                    int space = remaining.lastIndexOf(' ', split - 1);
+                    if (space <= 0) {
+                        split--;
+                    } else {
+                        split = space;
+                    }
+                }
+
+                String part = remaining.substring(0, split).trim();
+                if (part.isEmpty()) {
+                    part = remaining.substring(0, 1);
+                    split = 1;
+                }
+
+                ensureSpace();
+                canvas.drawText(part, 548, y, paint);
+                y += 24;
+
+                remaining = remaining.substring(split).trim();
+            }
+        }
+
+        void centerLine(String value) {
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(14);
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setStyle(Paint.Style.FILL);
+
+            ensureSpace();
+            canvas.drawText(value, 297, y, paint);
+            y += 30;
+
+            paint.setTextAlign(Paint.Align.RIGHT);
+        }
+
+        private void ensureSpace() {
+            if (y > 770) {
+                newPage();
+            }
         }
 
         void finish() {
@@ -635,18 +923,26 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
                     (InputMethodManager) getSystemService(
                             INPUT_METHOD_SERVICE
                     );
-            manager.hideSoftInputFromWindow(root.getWindowToken(), 0);
+
+            manager.hideSoftInputFromWindow(
+                    root.getWindowToken(),
+                    0
+            );
         } catch (Exception ignored) {
         }
     }
 
     private void toast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        Toast.makeText(
+                this,
+                message,
+                Toast.LENGTH_LONG
+        ).show();
     }
 
     private class DB extends SQLiteOpenHelper {
         DB(Context context) {
-            super(context, "invoice_personal.db", null, 2);
+            super(context, "invoice_personal.db", null, 3);
         }
 
         @Override
@@ -662,7 +958,10 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
                             "discount INTEGER," +
                             "notes TEXT," +
                             "total INTEGER," +
-                            "created INTEGER)"
+                            "created INTEGER," +
+                            "document_type TEXT NOT NULL DEFAULT " +
+                            "'فاکتور فروش کالا/خدمات'," +
+                            "issue_date TEXT)"
             );
 
             createItemsTable(database);
@@ -687,15 +986,35 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
                 int oldVersion,
                 int newVersion
         ) {
-            createItemsTable(database);
-
-            // فاکتورهای نسخهٔ قبلی به‌صورت یک ردیف کالا منتقل می‌شوند.
             if (oldVersion < 2) {
+                createItemsTable(database);
+
+                // انتقال فاکتورهای تک‌ردیفی نسخه‌های قدیمی
                 database.execSQL(
                         "INSERT INTO invoice_items " +
                                 "(invoice_id, description, qty, price, discount) " +
                                 "SELECT id, description, qty, price, discount " +
                                 "FROM invoices"
+                );
+            } else {
+                createItemsTable(database);
+            }
+
+            if (oldVersion < 3) {
+                database.execSQL(
+                        "ALTER TABLE invoices ADD COLUMN " +
+                                "document_type TEXT NOT NULL DEFAULT " +
+                                "'فاکتور فروش کالا/خدمات'"
+                );
+
+                database.execSQL(
+                        "ALTER TABLE invoices ADD COLUMN issue_date TEXT"
+                );
+
+                database.execSQL(
+                        "UPDATE invoices SET issue_date = " +
+                                "strftime('%Y-%m-%d', created / 1000, 'unixepoch') " +
+                                "WHERE issue_date IS NULL OR issue_date=''"
                 );
             }
         }
@@ -716,4 +1035,4 @@ private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
             );
         }
     }
-                          }
+}
