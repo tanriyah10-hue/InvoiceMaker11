@@ -36,20 +36,14 @@ import java.util.Date;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
-    private static final String COMPANY_NAME =
-            "گروه فنی مهندسی ایمن سولار سيستم";
-    private static final String COMPANY_ADDRESS =
-            "ارومیه، آزادگان ۱، کوی ۴";
-    private static final String COMPANY_PHONE =
-            "۰۹۱۴ ۶۰۷۷ ۶۲۶";
+    private static final String COMPANY_NAME = "گروه فنی مهندسی ایمن سولار سيستم";
+    private static final String COMPANY_ADDRESS = "ارومیه، آزادگان ۱، کوی ۴";
+    private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
 
-    private static final String TYPE_INVOICE =
-            "فاکتور فروش کالا/خدمات";
-    private static final String TYPE_PREINVOICE =
-            "پیش‌فاکتور فروش کالا/خدمات";
+    private static final String TYPE_INVOICE = "فاکتور فروش کالا/خدمات";
+    private static final String TYPE_PREINVOICE = "پیش‌فاکتور فروش کالا/خدمات";
 
     private DB db;
-
     private EditText customer;
     private EditText phone;
     private EditText notes;
@@ -70,6 +64,7 @@ public class MainActivity extends Activity {
         EditText qty;
         EditText price;
         EditText discount;
+        EditText taxPercent;
         LinearLayout card;
     }
 
@@ -85,9 +80,7 @@ public class MainActivity extends Activity {
     }
 
     private int dp(float value) {
-        return (int) (
-                value * getResources().getDisplayMetrics().density + 0.5f
-        );
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private TextView text(String value, int size, int color) {
@@ -151,39 +144,28 @@ public class MainActivity extends Activity {
         base("فاکتور ساز شخصی");
 
         root.addView(text("نوع سند", 14, 0xFF34495E));
-
-        String[] documentTypes = {
-                TYPE_INVOICE,
-                TYPE_PREINVOICE
-        };
-
         documentTypeSpinner = new Spinner(this);
+        String[] documentTypes = {TYPE_INVOICE, TYPE_PREINVOICE};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_spinner_item,
                 documentTypes
         );
-        adapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item
-        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         documentTypeSpinner.setAdapter(adapter);
         root.addView(documentTypeSpinner);
 
         root.addView(text("تاریخ صدور", 14, 0xFF34495E));
-
         issueDateView = text("", 16, primaryColor);
         issueDateView.setGravity(Gravity.CENTER);
         root.addView(issueDateView);
         updateIssueDateLabel();
 
-        root.addView(button(
-                "انتخاب تاریخ صدور",
-                this::showDatePicker
-        ));
+        root.addView(button("انتخاب تاریخ صدور", this::showDatePicker));
 
         customer = field("نام مشتری");
         phone = field("شماره تماس مشتری (اختیاری)");
-        notes = field("توضیحات فاکتور (اختیاری)");
+        notes = field("توضیحات فاکتور (مثال: اعتبار قیمت‌ها دو روز است)");
 
         addField("نام مشتری", customer);
         addField("شماره تماس مشتری", phone);
@@ -197,10 +179,7 @@ public class MainActivity extends Activity {
         itemRows.clear();
         addItemRow();
 
-        root.addView(button(
-                "＋ افزودن ردیف کالا یا خدمات",
-                this::addItemRow
-        ));
+        root.addView(button("＋ افزودن ردیف کالا یا خدمات", this::addItemRow));
 
         totalView = text("مبلغ نهایی: ۰ تومان", 19, primaryColor);
         totalView.setGravity(Gravity.CENTER);
@@ -236,42 +215,29 @@ public class MainActivity extends Activity {
                     issueDate.set(Calendar.MILLISECOND, 0);
                     updateIssueDateLabel();
                 },
-                year,
-                month,
-                day
+                year, month, day
         );
-
         dialog.show();
     }
 
     private void updateIssueDateLabel() {
         if (issueDateView != null) {
-            issueDateView.setText(
-                    "تاریخ انتخاب‌شده: " + displayDate(issueDate)
-            );
+            issueDateView.setText("تاریخ انتخاب‌شده: " + displayDate(issueDate));
         }
     }
 
     private String displayDate(Calendar date) {
-        return new SimpleDateFormat(
-                "yyyy/MM/dd",
-                Locale.US
-        ).format(date.getTime());
+        return new SimpleDateFormat("yyyy/MM/dd", Locale.US).format(date.getTime());
     }
 
     private String databaseDate(Calendar date) {
-        return new SimpleDateFormat(
-                "yyyy-MM-dd",
-                Locale.US
-        ).format(date.getTime());
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date.getTime());
     }
 
     private String selectedDocumentType() {
-        if (documentTypeSpinner == null
-                || documentTypeSpinner.getSelectedItem() == null) {
+        if (documentTypeSpinner == null || documentTypeSpinner.getSelectedItem() == null) {
             return TYPE_INVOICE;
         }
-
         return documentTypeSpinner.getSelectedItem().toString();
     }
 
@@ -284,7 +250,6 @@ public class MainActivity extends Activity {
         row.card.setBackgroundColor(Color.WHITE);
 
         row.description = field("شرح کالا یا خدمات");
-
         row.qty = field("تعداد");
         row.qty.setInputType(8194);
         row.qty.setText("1");
@@ -292,17 +257,20 @@ public class MainActivity extends Activity {
         row.price = field("قیمت واحد (تومان)");
         row.price.setInputType(8194);
 
-        row.discount = field("تخفیف این ردیف (تومان)");
+        row.discount = field("تخفیف (تومان)");
         row.discount.setInputType(8194);
         row.discount.setText("0");
 
-        row.card.addView(
-                text("ردیف " + (itemRows.size() + 1), 16, primaryColor)
-        );
+        row.taxPercent = field("درصد مالیات");
+        row.taxPercent.setInputType(8194);
+        row.taxPercent.setText("0");
+
+        row.card.addView(text("ردیف " + (itemRows.size() + 1), 16, primaryColor));
         row.card.addView(row.description);
         row.card.addView(row.qty);
         row.card.addView(row.price);
         row.card.addView(row.discount);
+        row.card.addView(row.taxPercent);
 
         row.card.addView(button("حذف این ردیف", () -> {
             if (itemRows.size() <= 1) {
@@ -370,26 +338,35 @@ public class MainActivity extends Activity {
         return String.format(Locale.US, "%,d", value);
     }
 
-    private long rowAmount(ItemRow row) {
+    private long rowBeforeTax(ItemRow row) {
         long quantity = number(row.qty);
         long price = number(row.price);
         long discount = number(row.discount);
         return Math.max(0, quantity * price - discount);
     }
 
+    private long rowTaxAmount(ItemRow row) {
+        long subtotal = rowBeforeTax(row);
+        long taxPercent = number(row.taxPercent);
+        if (taxPercent <= 0) return 0;
+        return Math.round(subtotal * taxPercent / 100.0);
+    }
+
+    private long rowTotalWithTax(ItemRow row) {
+        return rowBeforeTax(row) + rowTaxAmount(row);
+    }
+
     private long invoiceAmount() {
         long total = 0;
         for (ItemRow row : itemRows) {
-            total += rowAmount(row);
+            total += rowTotalWithTax(row);
         }
         return total;
     }
 
     private void updateTotal() {
         if (totalView != null) {
-            totalView.setText(
-                    "مبلغ نهایی: " + money(invoiceAmount()) + " تومان"
-            );
+            totalView.setText("مبلغ نهایی: " + money(invoiceAmount()) + " تومان");
         }
     }
 
@@ -409,6 +386,21 @@ public class MainActivity extends Activity {
 
             if (number(row.qty) < 1) {
                 toast("تعداد ردیف " + (i + 1) + " باید حداقل ۱ باشد");
+                return false;
+            }
+
+            if (number(row.price) < 0) {
+                toast("قیمت ردیف " + (i + 1) + " نامعتبر است");
+                return false;
+            }
+
+            if (number(row.discount) < 0) {
+                toast("تخفیف ردیف " + (i + 1) + " نامعتبر است");
+                return false;
+            }
+
+            if (number(row.taxPercent) < 0) {
+                toast("درصد مالیات ردیف " + (i + 1) + " نامعتبر است");
                 return false;
             }
         }
@@ -436,16 +428,6 @@ public class MainActivity extends Activity {
 
         invoice.put("customer", customerName);
         invoice.put("phone", phone.getText().toString().trim());
-
-        // این ستون‌های قدیمی برای حفظ سازگاری فاکتورهای قبلی باقی مانده‌اند.
-        ItemRow first = itemRows.get(0);
-        invoice.put(
-                "description",
-                first.description.getText().toString().trim()
-        );
-        invoice.put("qty", number(first.qty));
-        invoice.put("price", number(first.price));
-        invoice.put("discount", number(first.discount));
         invoice.put("notes", notes.getText().toString().trim());
         invoice.put("total", invoiceAmount());
         invoice.put("created", System.currentTimeMillis());
@@ -460,15 +442,19 @@ public class MainActivity extends Activity {
             invoiceId = sql.insertOrThrow("invoices", null, invoice);
 
             for (ItemRow row : itemRows) {
+                long subtotal = rowBeforeTax(row);
+                long taxAmount = rowTaxAmount(row);
+                long rowTotal = subtotal + taxAmount;
+
                 ContentValues item = new ContentValues();
                 item.put("invoice_id", invoiceId);
-                item.put(
-                        "description",
-                        row.description.getText().toString().trim()
-                );
+                item.put("description", row.description.getText().toString().trim());
                 item.put("qty", number(row.qty));
                 item.put("price", number(row.price));
                 item.put("discount", number(row.discount));
+                item.put("tax_percent", number(row.taxPercent));
+                item.put("tax_amount", taxAmount);
+                item.put("total", rowTotal);
 
                 sql.insertOrThrow("invoice_items", null, item);
             }
@@ -488,10 +474,7 @@ public class MainActivity extends Activity {
             long savedId = invoiceId;
             new AlertDialog.Builder(this)
                     .setMessage("سند ذخیره شد. می‌خواهی PDF آن را بسازی؟")
-                    .setPositiveButton(
-                            "ساخت PDF",
-                            (dialog, which) -> makePdf(savedId)
-                    )
+                    .setPositiveButton("ساخت PDF", (dialog, which) -> makePdf(savedId))
                     .setNegativeButton("بستن", null)
                     .show();
         }
@@ -500,24 +483,15 @@ public class MainActivity extends Activity {
     private void showList() {
         base("فاکتورها و پیش‌فاکتورهای ذخیره‌شده");
 
-        root.addView(button(
-                "بازگشت به فرم ثبت",
-                this::showForm
-        ));
+        root.addView(button("بازگشت به فرم ثبت", this::showForm));
 
         Cursor cursor = db.getReadableDatabase().rawQuery(
-                "SELECT id, customer, total, created, " +
-                        "document_type, issue_date " +
-                        "FROM invoices ORDER BY id DESC",
+                "SELECT id, customer, total, created, document_type, issue_date FROM invoices ORDER BY id DESC",
                 null
         );
 
         if (cursor.getCount() == 0) {
-            root.addView(text(
-                    "هنوز سندی ذخیره نشده است.",
-                    16,
-                    0xFF555555
-            ));
+            root.addView(text("هنوز سندی ذخیره نشده است.", 16, 0xFF555555));
         }
 
         while (cursor.moveToNext()) {
@@ -525,13 +499,12 @@ public class MainActivity extends Activity {
             String customerName = cursor.getString(1);
             long total = cursor.getLong(2);
             long created = cursor.getLong(3);
-            String documentType = cursor.getString(4);
+            String typeText = cursor.getString(4);
             String issueDateText = cursor.getString(5);
 
-            if (documentType == null || documentType.trim().isEmpty()) {
-                documentType = TYPE_INVOICE;
+            if (typeText == null || typeText.trim().isEmpty()) {
+                typeText = TYPE_INVOICE;
             }
-
             if (issueDateText == null || issueDateText.trim().isEmpty()) {
                 issueDateText = dateFromTimestamp(created);
             } else {
@@ -543,28 +516,12 @@ public class MainActivity extends Activity {
             card.setPadding(dp(10), dp(8), dp(10), dp(8));
             card.setBackgroundColor(Color.WHITE);
 
-            card.addView(text(documentType, 16, primaryColor));
-            card.addView(text(
-                    "مشتری: " + customerName,
-                    15,
-                    0xFF222222
-            ));
-            card.addView(text(
-                    "تاریخ صدور: " + issueDateText,
-                    13,
-                    0xFF555555
-            ));
-            card.addView(text(
-                    "مبلغ: " + money(total) + " تومان",
-                    14,
-                    primaryColor
-            ));
+            card.addView(text(typeText, 16, primaryColor));
+            card.addView(text("مشتری: " + customerName, 15, 0xFF222222));
+            card.addView(text("تاریخ صدور: " + issueDateText, 13, 0xFF555555));
+            card.addView(text("مبلغ: " + money(total) + " تومان", 14, primaryColor));
 
-            card.addView(button(
-                    "ساخت و اشتراک PDF",
-                    () -> makePdf(id)
-            ));
-
+            card.addView(button("ساخت و اشتراک PDF", () -> makePdf(id)));
             card.addView(button("حذف سند", () ->
                     new AlertDialog.Builder(this)
                             .setMessage("این سند حذف شود؟")
@@ -576,11 +533,10 @@ public class MainActivity extends Activity {
                             .show()
             ));
 
-            LinearLayout.LayoutParams params =
-                    new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                    );
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
             params.bottomMargin = dp(8);
             root.addView(card, params);
         }
@@ -589,16 +545,12 @@ public class MainActivity extends Activity {
     }
 
     private String dateFromTimestamp(long timestamp) {
-        return new SimpleDateFormat(
-                "yyyy/MM/dd",
-                Locale.US
-        ).format(new Date(timestamp));
+        return new SimpleDateFormat("yyyy/MM/dd", Locale.US).format(new Date(timestamp));
     }
 
     private void makePdf(long id) {
         Cursor invoiceCursor = db.getReadableDatabase().rawQuery(
-                "SELECT customer, phone, notes, total, created, " +
-                        "document_type, issue_date " +
+                "SELECT customer, phone, notes, total, created, document_type, issue_date " +
                         "FROM invoices WHERE id=?",
                 new String[]{String.valueOf(id)}
         );
@@ -614,88 +566,96 @@ public class MainActivity extends Activity {
         String invoiceNotes = invoiceCursor.getString(2);
         long total = invoiceCursor.getLong(3);
         long created = invoiceCursor.getLong(4);
-        String documentType = invoiceCursor.getString(5);
+        String docType = invoiceCursor.getString(5);
         String issueDateText = invoiceCursor.getString(6);
         invoiceCursor.close();
 
-        if (documentType == null || documentType.trim().isEmpty()) {
-            documentType = TYPE_INVOICE;
+        if (docType == null || docType.trim().isEmpty()) {
+            docType = TYPE_INVOICE;
         }
-
         if (issueDateText == null || issueDateText.trim().isEmpty()) {
             issueDateText = dateFromTimestamp(created);
         } else {
             issueDateText = issueDateText.replace('-', '/');
         }
 
-        PdfDocument pdf = new PdfDocument();
+        Cursor itemsCursor = db.getReadableDatabase().rawQuery(
+                "SELECT description, qty, price, discount, tax_percent, tax_amount, total " +
+                        "FROM invoice_items WHERE invoice_id=? ORDER BY id",
+                new String[]{String.valueOf(id)}
+        );
 
+        ArrayList<ItemInfo> rows = new ArrayList<>();
+        long subtotal = 0;
+        long discountTotal = 0;
+        long taxTotal = 0;
+
+        while (itemsCursor.moveToNext()) {
+            String description = itemsCursor.getString(0);
+            long qty = itemsCursor.getLong(1);
+            long price = itemsCursor.getLong(2);
+            long discount = itemsCursor.getLong(3);
+            long taxPercent = itemsCursor.getLong(4);
+            long tax = itemsCursor.getLong(5);
+            long totalRow = itemsCursor.getLong(6);
+
+            subtotal += qty * price;
+            discountTotal += discount;
+            taxTotal += tax;
+
+            rows.add(new ItemInfo(description, qty, price, discount, taxPercent, tax, totalRow));
+        }
+        itemsCursor.close();
+
+        PdfDocument pdf = new PdfDocument();
         try {
             PdfPageWriter writer = new PdfPageWriter(
                     pdf,
                     customerName,
                     phoneNumber,
-                    documentType,
+                    docType,
                     issueDateText,
                     created
             );
 
-            writer.centerLine(documentType);
+            writer.drawTableHeader();
 
-            Cursor items = db.getReadableDatabase().rawQuery(
-                    "SELECT description, qty, price, discount " +
-                            "FROM invoice_items " +
-                            "WHERE invoice_id=? ORDER BY id",
-                    new String[]{String.valueOf(id)}
-            );
+            float yStart = writer.getCurrentY();
+            float rowY = yStart;
 
-            int index = 1;
-            while (items.moveToNext()) {
-                String description = items.getString(0);
-                long quantity = items.getLong(1);
-                long price = items.getLong(2);
-                long discount = items.getLong(3);
-                long amount = Math.max(0, quantity * price - discount);
-
-                writer.line(index + ") " + description);
-                writer.line(
-                        "تعداد: " + quantity +
-                                " | قیمت واحد: " + money(price) +
-                                " | تخفیف: " + money(discount)
+            for (int i = 0; i < rows.size(); i++) {
+                ItemInfo item = rows.get(i);
+                writer.drawItemRow(
+                        i + 1,
+                        item.description,
+                        item.qty,
+                        item.price,
+                        item.discount,
+                        item.taxPercent,
+                        item.taxAmount,
+                        item.rowTotal
                 );
-                writer.line(
-                        "مبلغ این ردیف: " + money(amount) + " تومان"
-                );
-                writer.line("");
-                index++;
+                rowY = writer.getCurrentY();
             }
-            items.close();
 
-            writer.centerLine(documentType);
-            writer.centerLine(
-                    "مبلغ نهایی: " + money(total) + " تومان"
+            writer.drawSummary(
+                    subtotal,
+                    discountTotal,
+                    taxTotal,
+                    total,
+                    invoiceNotes
             );
-
-            if (invoiceNotes != null
-                    && !invoiceNotes.trim().isEmpty()) {
-                writer.line("توضیحات: " + invoiceNotes);
-            }
 
             writer.finish();
 
-            File directory = new File(
-                    getExternalFilesDir(null),
-                    "Invoices"
-            );
-
-            if (!directory.exists() && !directory.mkdirs()) {
+            File dir = new File(getExternalFilesDir(null), "Invoices");
+            if (!dir.exists() && !dir.mkdirs()) {
                 throw new Exception("ساخت پوشهٔ PDF ناموفق بود");
             }
 
-            File file = new File(directory, "invoice-" + id + ".pdf");
-
-            try (FileOutputStream output = new FileOutputStream(file)) {
-                pdf.writeTo(output);
+            File file = new File(dir, "invoice-" + id + ".pdf");
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                pdf.writeTo(out);
             }
 
             Uri uri = androidx.core.content.FileProvider.getUriForFile(
@@ -709,14 +669,31 @@ public class MainActivity extends Activity {
             send.putExtra(Intent.EXTRA_STREAM, uri);
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-            startActivity(Intent.createChooser(
-                    send,
-                    "اشتراک‌گذاری PDF"
-            ));
+            startActivity(Intent.createChooser(send, "اشتراک‌گذاری PDF"));
         } catch (Exception e) {
             toast("ساخت PDF انجام نشد: " + e.getMessage());
         } finally {
             pdf.close();
+        }
+    }
+
+    private static class ItemInfo {
+        String description;
+        long qty;
+        long price;
+        long discount;
+        long taxPercent;
+        long taxAmount;
+        long rowTotal;
+
+        ItemInfo(String description, long qty, long price, long discount, long taxPercent, long taxAmount, long rowTotal) {
+            this.description = description;
+            this.qty = qty;
+            this.price = price;
+            this.discount = discount;
+            this.taxPercent = taxPercent;
+            this.taxAmount = taxAmount;
+            this.rowTotal = rowTotal;
         }
     }
 
@@ -728,8 +705,7 @@ public class MainActivity extends Activity {
         private final String issueDateText;
         private final long created;
 
-        private final Paint paint =
-                new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         private PdfDocument.Page page;
         private Canvas canvas;
@@ -759,18 +735,10 @@ public class MainActivity extends Activity {
             }
 
             pageNumber++;
-
-            PdfDocument.PageInfo info =
-                    new PdfDocument.PageInfo.Builder(
-                            595,
-                            842,
-                            pageNumber
-                    ).create();
-
+            PdfDocument.PageInfo info = new PdfDocument.PageInfo.Builder(595, 842, pageNumber).create();
             page = pdf.startPage(info);
             canvas = page.getCanvas();
 
-            // کادر دور تمام محتوای این صفحهٔ PDF
             paint.setColor(Color.BLACK);
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(1.5f);
@@ -784,18 +752,8 @@ public class MainActivity extends Activity {
             canvas.drawText(COMPANY_NAME, 548, 62, paint);
 
             paint.setTextSize(12);
-            canvas.drawText(
-                    "آدرس: " + COMPANY_ADDRESS,
-                    548,
-                    88,
-                    paint
-            );
-            canvas.drawText(
-                    "تلفن شرکت: " + COMPANY_PHONE,
-                    548,
-                    111,
-                    paint
-            );
+            canvas.drawText("آدرس: " + COMPANY_ADDRESS, 548, 88, paint);
+            canvas.drawText("تلفن شرکت: " + COMPANY_PHONE, 548, 111, paint);
 
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setTextSize(17);
@@ -808,37 +766,13 @@ public class MainActivity extends Activity {
 
             paint.setTextAlign(Paint.Align.RIGHT);
             paint.setTextSize(12);
-            canvas.drawText(
-                    "مشتری: " + customerName,
-                    548,
-                    188,
-                    paint
-            );
-            canvas.drawText(
-                    "تلفن مشتری: " +
-                            (customerPhone == null ? "" : customerPhone),
-                    548,
-                    212,
-                    paint
-            );
-            canvas.drawText(
-                    "تاریخ صدور: " + issueDateText,
-                    548,
-                    236,
-                    paint
-            );
+            canvas.drawText("مشتری: " + customerName, 548, 188, paint);
+            canvas.drawText("تلفن مشتری: " + (customerPhone == null ? "" : customerPhone), 548, 212, paint);
+            canvas.drawText("تاریخ صدور: " + issueDateText, 548, 236, paint);
 
-            String createdText = new SimpleDateFormat(
-                    "yyyy/MM/dd - HH:mm",
-                    Locale.US
-            ).format(new Date(created));
-
-            canvas.drawText(
-                    "زمان ثبت: " + createdText,
-                    548,
-                    260,
-                    paint
-            );
+            String createdText = new SimpleDateFormat("yyyy/MM/dd - HH:mm", Locale.US)
+                    .format(new Date(created));
+            canvas.drawText("زمان ثبت: " + createdText, 548, 260, paint);
 
             paint.setStyle(Paint.Style.STROKE);
             canvas.drawLine(45, 274, 550, 274, paint);
@@ -847,66 +781,142 @@ public class MainActivity extends Activity {
             y = 300;
         }
 
-        void line(String value) {
-            paint.setColor(Color.BLACK);
-            paint.setTextSize(12);
-            paint.setTextAlign(Paint.Align.RIGHT);
-            paint.setStyle(Paint.Style.FILL);
-
-            // شکستن خط‌های بلند تا نوشته داخل کادر بماند.
-            String remaining = value == null ? "" : value;
-            float maxWidth = 490;
-
-            if (remaining.isEmpty()) {
-                ensureSpace();
-                y += 18;
-                return;
-            }
-
-            while (!remaining.isEmpty()) {
-                int split = remaining.length();
-
-                while (split > 1
-                        && paint.measureText(remaining, 0, split) > maxWidth) {
-                    int space = remaining.lastIndexOf(' ', split - 1);
-                    if (space <= 0) {
-                        split--;
-                    } else {
-                        split = space;
-                    }
-                }
-
-                String part = remaining.substring(0, split).trim();
-                if (part.isEmpty()) {
-                    part = remaining.substring(0, 1);
-                    split = 1;
-                }
-
-                ensureSpace();
-                canvas.drawText(part, 548, y, paint);
-                y += 24;
-
-                remaining = remaining.substring(split).trim();
-            }
+        float getCurrentY() {
+            return y;
         }
 
-        void centerLine(String value) {
-            paint.setColor(Color.BLACK);
-            paint.setTextSize(14);
+        void drawTableHeader() {
+            // کادر جدول
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(1.2f);
+            canvas.drawRect(45, 290, 550, 350, paint);
+
+            paint.setStyle(Paint.Style.FILL);
             paint.setTextAlign(Paint.Align.CENTER);
-            paint.setStyle(Paint.Style.FILL);
+            paint.setTextSize(10);
 
-            ensureSpace();
-            canvas.drawText(value, 297, y, paint);
-            y += 30;
+            float[] xs = {50, 125, 180, 230, 290, 355, 420, 490, 530};
+            String[] headers = {"ردیف", "شرح", "تعداد", "قیمت", "تخفیف", "مالیات %", "مالیات", "جمع ردیف", ""};
+
+            // چون در برخی دستگاه‌ها ارتفاع کادر محدود است، متن‌ها با محور x مجزا می‌آیند.
+            // قرار دادن ردیف‌های دکمه‌ای به صورت یکنواخت
+            canvas.drawText(headers[0], xs[0], 320, paint);
+            canvas.drawText(headers[1], xs[1], 320, paint);
+            canvas.drawText(headers[2], xs[2], 320, paint);
+            canvas.drawText(headers[3], xs[3], 320, paint);
+            canvas.drawText(headers[4], xs[4], 320, paint);
+            canvas.drawText(headers[5], xs[5], 320, paint);
+            canvas.drawText(headers[6], xs[6], 320, paint);
+            canvas.drawText(headers[7], xs[7], 320, paint);
 
             paint.setTextAlign(Paint.Align.RIGHT);
+            y = 360;
         }
 
-        private void ensureSpace() {
-            if (y > 770) {
+        void drawItemRow(int index, String description, long qty, long price, long discount, long taxPercent, long taxAmount, long rowTotal) {
+            if (y > 700) {
+                newPage();
+                drawTableHeader();
+            }
+
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTextSize(9);
+            canvas.drawText(String.valueOf(index), 55, y, paint);
+
+            paint.setTextAlign(Paint.Align.RIGHT);
+            ArrayList<String> descLines = wrapText(description, 14);
+            int lineCount = Math.min(descLines.size(), 2);
+            for (int i = 0; i < lineCount; i++) {
+                canvas.drawText(descLines.get(i), 160, y + (i * 14), paint);
+            }
+
+            paint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(String.valueOf(qty), 200, y + 6, paint);
+            canvas.drawText(String.format(Locale.US, "%,d", price), 250, y + 6, paint);
+            canvas.drawText(String.format(Locale.US, "%,d", discount), 315, y + 6, paint);
+            canvas.drawText(String.valueOf(taxPercent), 385, y + 6, paint);
+            canvas.drawText(String.format(Locale.US, "%,d", taxAmount), 455, y + 6, paint);
+            canvas.drawText(String.format(Locale.US, "%,d", rowTotal), 520, y + 6, paint);
+
+            paint.setStyle(Paint.Style.STROKE);
+            canvas.drawLine(45, y + 18, 550, y + 18, paint);
+            paint.setStyle(Paint.Style.FILL);
+
+            y += 28 + (lineCount > 1 ? 8 : 0);
+        }
+
+        ArrayList<String> wrapText(String text, int maxChars) {
+            if (text == null || text.trim().isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            ArrayList<String> lines = new ArrayList<>();
+            String[] words = text.split(" ");
+            StringBuilder current = new StringBuilder();
+
+            for (String word : words) {
+                if (word.length() > maxChars) {
+                    if (current.length() > 0) {
+                        lines.add(current.toString().trim());
+                        current = new StringBuilder();
+                    }
+                    int start = 0;
+                    while (start < word.length()) {
+                        int end = Math.min(start + maxChars, word.length());
+                        lines.add(word.substring(start, end));
+                        start = end;
+                    }
+                    continue;
+                }
+
+                if (current.length() + word.length() + 1 <= maxChars) {
+                    if (current.length() > 0) current.append(" ");
+                    current.append(word);
+                } else {
+                    if (current.length() > 0) {
+                        lines.add(current.toString().trim());
+                        current = new StringBuilder();
+                    }
+                    current.append(word);
+                }
+            }
+
+            if (current.length() > 0) {
+                lines.add(current.toString().trim());
+            }
+
+            if (lines.isEmpty()) {
+                lines.add("");
+            }
+
+            return lines;
+        }
+
+        void drawSummary(long subtotal, long discountTotal, long taxTotal, long grandTotal, String noteText) {
+            if (y > 620) {
                 newPage();
             }
+
+            paint.setStyle(Paint.Style.STROKE);
+            canvas.drawRect(45, y, 550, y + 120, paint);
+            paint.setStyle(Paint.Style.FILL);
+
+            paint.setTextAlign(Paint.Align.RIGHT);
+            paint.setTextSize(11);
+            canvas.drawText("جمع ردیف‌ها: " + money(subtotal) + " تومان", 520, y + 22, paint);
+            canvas.drawText("جمع تخفیف: " + money(discountTotal) + " تومان", 520, y + 42, paint);
+            canvas.drawText("جمع مالیات: " + money(taxTotal) + " تومان", 520, y + 62, paint);
+            canvas.drawText("جمع نهایی: " + money(grandTotal) + " تومان", 520, y + 92, paint);
+
+            if (noteText != null && !noteText.trim().isEmpty()) {
+                canvas.drawText("توضیحات: " + noteText, 520, y + 118, paint);
+            }
+
+            y += 140;
+        }
+
+        String money(long value) {
+            return String.format(Locale.US, "%,d", value);
         }
 
         void finish() {
@@ -919,30 +929,19 @@ public class MainActivity extends Activity {
 
     private void hideKeyboard() {
         try {
-            InputMethodManager manager =
-                    (InputMethodManager) getSystemService(
-                            INPUT_METHOD_SERVICE
-                    );
-
-            manager.hideSoftInputFromWindow(
-                    root.getWindowToken(),
-                    0
-            );
+            InputMethodManager manager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            manager.hideSoftInputFromWindow(root.getWindowToken(), 0);
         } catch (Exception ignored) {
         }
     }
 
     private void toast(String message) {
-        Toast.makeText(
-                this,
-                message,
-                Toast.LENGTH_LONG
-        ).show();
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private class DB extends SQLiteOpenHelper {
         DB(Context context) {
-            super(context, "invoice_personal.db", null, 3);
+            super(context, "invoice_personal.db", null, 4);
         }
 
         @Override
@@ -952,15 +951,10 @@ public class MainActivity extends Activity {
                             "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                             "customer TEXT," +
                             "phone TEXT," +
-                            "description TEXT," +
-                            "qty INTEGER," +
-                            "price INTEGER," +
-                            "discount INTEGER," +
                             "notes TEXT," +
                             "total INTEGER," +
                             "created INTEGER," +
-                            "document_type TEXT NOT NULL DEFAULT " +
-                            "'فاکتور فروش کالا/خدمات'," +
+                            "document_type TEXT NOT NULL DEFAULT 'فاکتور فروش کالا/خدمات'," +
                             "issue_date TEXT)"
             );
 
@@ -976,25 +970,21 @@ public class MainActivity extends Activity {
                             "qty INTEGER NOT NULL," +
                             "price INTEGER NOT NULL," +
                             "discount INTEGER NOT NULL DEFAULT 0," +
+                            "tax_percent INTEGER NOT NULL DEFAULT 0," +
+                            "tax_amount INTEGER NOT NULL DEFAULT 0," +
+                            "total INTEGER NOT NULL DEFAULT 0," +
                             "FOREIGN KEY(invoice_id) REFERENCES invoices(id))"
             );
         }
 
         @Override
-        public void onUpgrade(
-                SQLiteDatabase database,
-                int oldVersion,
-                int newVersion
-        ) {
+        public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
             if (oldVersion < 2) {
                 createItemsTable(database);
-
-                // انتقال فاکتورهای تک‌ردیفی نسخه‌های قدیمی
                 database.execSQL(
                         "INSERT INTO invoice_items " +
                                 "(invoice_id, description, qty, price, discount) " +
-                                "SELECT id, description, qty, price, discount " +
-                                "FROM invoices"
+                                "SELECT id, description, qty, price, discount FROM invoices"
                 );
             } else {
                 createItemsTable(database);
@@ -1002,37 +992,33 @@ public class MainActivity extends Activity {
 
             if (oldVersion < 3) {
                 database.execSQL(
-                        "ALTER TABLE invoices ADD COLUMN " +
-                                "document_type TEXT NOT NULL DEFAULT " +
-                                "'فاکتور فروش کالا/خدمات'"
+                        "ALTER TABLE invoices ADD COLUMN document_type TEXT NOT NULL DEFAULT 'فاکتور فروش کالا/خدمات'"
                 );
-
                 database.execSQL(
                         "ALTER TABLE invoices ADD COLUMN issue_date TEXT"
                 );
-
                 database.execSQL(
-                        "UPDATE invoices SET issue_date = " +
-                                "strftime('%Y-%m-%d', created / 1000, 'unixepoch') " +
-                                "WHERE issue_date IS NULL OR issue_date=''"
+                        "UPDATE invoices SET issue_date = strftime('%Y-%m-%d', created / 1000, 'unixepoch') WHERE issue_date IS NULL OR issue_date=''"
+                );
+            }
+
+            if (oldVersion < 4) {
+                database.execSQL(
+                        "ALTER TABLE invoice_items ADD COLUMN tax_percent INTEGER NOT NULL DEFAULT 0"
+                );
+                database.execSQL(
+                        "ALTER TABLE invoice_items ADD COLUMN tax_amount INTEGER NOT NULL DEFAULT 0"
+                );
+                database.execSQL(
+                        "ALTER TABLE invoice_items ADD COLUMN total INTEGER NOT NULL DEFAULT 0"
                 );
             }
         }
 
         void delete(long id) {
             SQLiteDatabase database = getWritableDatabase();
-
-            database.delete(
-                    "invoice_items",
-                    "invoice_id=?",
-                    new String[]{String.valueOf(id)}
-            );
-
-            database.delete(
-                    "invoices",
-                    "id=?",
-                    new String[]{String.valueOf(id)}
-            );
+            database.delete("invoice_items", "invoice_id=?", new String[]{String.valueOf(id)});
+            database.delete("invoices", "id=?", new String[]{String.valueOf(id)});
         }
     }
-}
+                        }
