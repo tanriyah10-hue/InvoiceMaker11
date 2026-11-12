@@ -48,9 +48,8 @@ import java.util.Locale;
 public class MainActivity extends Activity {
 
     private static final String COMPANY_NAME =
-            " گروه فنی مهندسی ایمن سولار سيستم";
-    private static final String COMPANY_NAME2 =
-            "حبیبی سهامی خاص ۱۲۱۱۴"; 
+            " گروه فنی مهندسی حبیبی ایمن سولار سيستم";
+        
     private static final String COMPANY_ADDRESS =
             "ارومیه، آزادگان ۱، کوی ۴";
 
