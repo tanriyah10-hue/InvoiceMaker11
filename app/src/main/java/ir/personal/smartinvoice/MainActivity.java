@@ -32,6 +32,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.FileProvider;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
@@ -45,7 +47,7 @@ public class MainActivity extends Activity {
             "گروه فنی مهندسی ایمن سولار سيستم";
     private static final String COMPANY_ADDRESS =
             "ارومیه، آزادگان ۱، کوی ۴";
-    private static final String COMPANY_PHONE = "۰۹۱۴ ۶۰۷۷ ۶۲۶";
+    private static final String COMPANY_PHONE = "۰۹۱۴۶۰۷۷۶۲۶";
 
     private static final String TYPE_INVOICE =
             "فاکتور فروش کالا/خدمات";
@@ -66,7 +68,7 @@ public class MainActivity extends Activity {
     private LinearLayout itemContainer;
     private Spinner documentTypeSpinner;
 
-    private final Calendar issueDate = Calendar.getInstance();
+    private Calendar issueDate = Calendar.getInstance();
     private final ArrayList<ItemRow> itemRows = new ArrayList<>();
 
     private final int backgroundColor = 0xFFF4F6F8;
@@ -90,15 +92,8 @@ public class MainActivity extends Activity {
         long taxAmount;
         long rowTotal;
 
-        ItemInfo(
-                String description,
-                long qty,
-                long price,
-                long discount,
-                long taxPercent,
-                long taxAmount,
-                long rowTotal
-        ) {
+        ItemInfo(String description, long qty, long price, long discount,
+                 long taxPercent, long taxAmount, long rowTotal) {
             this.description = description;
             this.qty = qty;
             this.price = price;
@@ -111,7 +106,18 @@ public class MainActivity extends Activity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-Metrics().density + 0.5f
+        super.onCreate(savedInstanceState);
+
+        getWindow().setStatusBarColor(0xFF124D63);
+        getWindow().setNavigationBarColor(0xFF124D63);
+
+        db = new DB(this);
+        showForm();
+    }
+
+    private int dp(float value) {
+        return (int) (
+                value * getResources().getDisplayMetrics().density + 0.5f
         );
     }
 
@@ -122,7 +128,60 @@ Metrics().density + 0.5f
         view.setTextColor(color);
         view.setPadding(dp(4), dp(7), dp(4), dp(7));
         view.setGravity(Gravity.RIGHT);
-xFF34495E));
+        return view;
+    }
+
+    private EditText field(String hint) {
+        EditText editText = new EditText(this);
+        editText.setHint(hint);
+        editText.setTextSize(15);
+        editText.setSingleLine(true);
+        editText.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        editText.setPadding(dp(12), dp(8), dp(12), dp(8));
+        editText.setBackgroundColor(Color.WHITE);
+        editText.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        return editText;
+    }
+
+    private Button button(String label, Runnable action) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setOnClickListener(view -> action.run());
+        return button;
+    }
+
+    private void base(String title) {
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(16), dp(12), dp(16), dp(16));
+        root.setBackgroundColor(backgroundColor);
+        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.addView(root);
+        setContentView(scrollView);
+
+        TextView heading = text(title, 22, 0xFF124D63);
+        heading.setGravity(Gravity.CENTER);
+        root.addView(heading);
+    }
+
+    private void addField(String label, EditText editText) {
+        root.addView(text(label, 14, 0xFF34495E));
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(50)
+                );
+        params.bottomMargin = dp(5);
+        root.addView(editText, params);
+    }
+
+    private void showForm() {
+        base("فاکتور ساز شخصی");
+
+        root.addView(text("نوع سند", 14, 0xFF34495E));
 
         documentTypeSpinner = new Spinner(this);
         String[] documentTypes = {TYPE_INVOICE, TYPE_PREINVOICE};
@@ -139,7 +198,6 @@ xFF34495E));
         root.addView(documentTypeSpinner);
 
         root.addView(text("تاریخ صدور", 14, 0xFF34495E));
-
         issueDateView = text("", 16, primaryColor);
         issueDateView.setGravity(Gravity.CENTER);
         root.addView(issueDateView);
@@ -202,7 +260,29 @@ xFF34495E));
                     issueDate.set(Calendar.HOUR_OF_DAY, 12);
                     issueDate.set(Calendar.MINUTE, 0);
                     issueDate.set(Calendar.SECOND, 0);
-                   format(date.getTime());
+                    issueDate.set(Calendar.MILLISECOND, 0);
+                    updateIssueDateLabel();
+                },
+                year,
+                month,
+                day
+        );
+        dialog.show();
+    }
+
+    private void updateIssueDateLabel() {
+        if (issueDateView != null) {
+            issueDateView.setText(
+                    "تاریخ انتخاب‌شده: " + displayDate(issueDate)
+            );
+        }
+    }
+
+    private String displayDate(Calendar date) {
+        return new SimpleDateFormat(
+                "yyyy/MM/dd",
+                Locale.US
+        ).format(date.getTime());
     }
 
     private String databaseDate(Calendar date) {
@@ -336,6 +416,7 @@ xFF34495E));
         if (taxPercent <= 0) {
             return 0;
         }
+
         return Math.round(subtotal * taxPercent / 100.0);
     }
 
@@ -445,7 +526,14 @@ xFF34495E));
                         row.description.getText().toString().trim()
                 );
                 item.put("qty", number(row.qty));
-                item.put("price", number(row            }
+                item.put("price", number(row.price));
+                item.put("discount", number(row.discount));
+                item.put("tax_percent", number(row.taxPercent));
+                item.put("tax_amount", taxAmount);
+                item.put("total", rowTotal);
+
+                sql.insertOrThrow("invoice_items", null, item);
+            }
 
             sql.setTransactionSuccessful();
             saved = true;
@@ -658,7 +746,18 @@ xFF34495E));
             }
 
             writer.drawSummary(
-");
+                    subtotal,
+                    discountTotal,
+                    taxTotal,
+                    total,
+                    invoiceNotes
+            );
+
+            writer.finish();
+
+            File dir = new File(getExternalFilesDir(null), "Invoices");
+            if (!dir.exists() && !dir.mkdirs()) {
+                throw new Exception("ساخت پوشهٔ PDF ناموفق بود");
             }
 
             File file = new File(dir, "invoice-" + id + ".pdf");
@@ -666,7 +765,7 @@ xFF34495E));
                 pdf.writeTo(out);
             }
 
-            Uri uri = androidx.core.content.FileProvider.getUriForFile(
+            Uri uri = FileProvider.getUriForFile(
                     this,
                     "ir.personal.smartinvoice.fileprovider",
                     file
@@ -693,15 +792,11 @@ xFF34495E));
         private final String issueDateText;
         private final long created;
 
-        /*
-         * ترتیب ستون‌ها از راست صفحه به چپ:
-         * شماره ردیف، شرح، تعداد، قیمت واحد،
-         * تخفیف، درصد مالیات، مبلغ مالیات، جمع ردیف.
-         */
         private final float[] columnWidths = {
                 40f, 110f, 45f, 65f, 58f, 50f, 62f, 75f
         };
 
+        // ترتیب ستون‌ها از راست صفحه به چپ
         private final String[] headers = {
                 "ردیف",
                 "شرح کالا یا خدمات",
@@ -715,7 +810,20 @@ xFF34495E));
 
         private PdfDocument.Page page;
         private Canvas canvas;
-        private int pageNumber =  customerPhone == null ? "" : customerPhone;
+        private int pageNumber = 0;
+        private float y;
+
+        PdfPageWriter(
+                PdfDocument pdf,
+                String customerName,
+                String customerPhone,
+                String documentType,
+                String issueDateText,
+                long created
+        ) {
+            this.pdf = pdf;
+            this.customerName = customerName == null ? "" : customerName;
+            this.customerPhone = customerPhone == null ? "" : customerPhone;
             this.documentType = documentType == null ? "" : documentType;
             this.issueDateText = issueDateText == null ? "" : issueDateText;
             this.created = created;
@@ -757,7 +865,72 @@ xFF34495E));
                     .build();
         }
 
-        private void draw page.getCanvas();
+        private void drawRtlText(
+                String value,
+                float left,
+                float top,
+                float width,
+                float height,
+                float textSize,
+                boolean bold
+        ) {
+            StaticLayout layout = makeRtlLayout(
+                    value,
+                    Math.max(1f, width - 8f),
+                    textSize,
+                    bold
+                private StaticLayout makeRtlCellLayout(
+        String value,
+        float width,
+        float textSize,
+        boolean bold
+) {
+    String safeValue = value == null ? "" : value;
+    int layoutWidth = Math.max(1, (int) width);
+
+    return StaticLayout.Builder
+            .obtain(
+                    safeValue,
+                    0,
+                    safeValue.length(),
+                    makeTextPaint(textSize, bold),
+                    layoutWidth
+            )
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setTextDirection(TextDirectionHeuristics.RTL)
+            .setIncludePad(false)
+            .setLineSpacing(0f, 1f)
+            .build();
+                }
+            );
+
+            float textTop =
+                    top + Math.max(0f, (height - layout.getHeight()) / 2f);
+
+            canvas.save();
+            canvas.clipRect(
+                    left + 2f,
+                    top + 2f,
+                    left + width - 2f,
+                    top + height - 2f
+            );
+            canvas.translate(left + 4f, textTop);
+            layout.draw(canvas);
+            canvas.restore();
+        }
+
+        private void newPage() {
+            if (page != null) {
+                pdf.finishPage(page);
+            }
+
+            pageNumber++;
+            PdfDocument.PageInfo info =
+                    new PdfDocument.PageInfo.Builder(595, 842, pageNumber)
+                            .create();
+
+            page = pdf.startPage(info);
+            canvas = page.getCanvas();
 
             Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             borderPaint.setColor(Color.BLACK);
@@ -771,7 +944,111 @@ xFF34495E));
             );
             drawRtlText(
                     "آدرس: " + COMPANY_ADDRESS,
-                    TABLE_LEFT, 72f, TABLE : 0.8f);
+                    TABLE_LEFT, 72f, TABLE_WIDTH, 22f, 11f, false
+            );
+
+            String phoneLtr = "\u2066" + COMPANY_PHONE + "\u2069";
+            drawRtlText(
+                    "تلفن شرکت: " + phoneLtr,
+                    TABLE_LEFT, 94f, TABLE_WIDTH, 22f, 11f, false
+            );
+
+            drawRtlText(
+                    documentType,
+                    TABLE_LEFT, 122f, TABLE_WIDTH, 30f, 16f, true
+            );
+
+            Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            linePaint.setColor(Color.BLACK);
+            linePaint.setStrokeWidth(1f);
+            canvas.drawLine(45f, 157f, 550f, 157f, linePaint);
+
+            drawRtlText(
+                    "مشتری: " + customerName,
+                    TABLE_LEFT, 165f, TABLE_WIDTH, 22f, 11f, false
+            );
+            drawRtlText(
+                    "تلفن مشتری: " + customerPhone,
+                    TABLE_LEFT, 188f, TABLE_WIDTH, 22f, 11f, false
+            );
+            drawRtlText(
+                    "تاریخ صدور: " + issueDateText,
+                    TABLE_LEFT, 211f, TABLE_WIDTH, 22f, 11f, false
+            );
+
+            String createdText = new SimpleDateFormat(
+                    "yyyy/MM/dd - HH:mm",
+                    Locale.US
+            ).format(new Date(created));
+
+            drawRtlText(
+                    "زمان ثبت: " + createdText,
+                    TABLE_LEFT, 234f, TABLE_WIDTH, 22f, 10f, false
+            );
+
+            canvas.drawLine(45f, 265f, 550f, 265f, linePaint);
+            y = 282f;
+        }
+
+        float getCurrentY() {
+            return y;
+        }
+
+        void drawTableHeader() {
+            drawTableRow(headers, true);
+        }
+
+        void drawItemRow(
+                int index,
+                String description,
+                long qty,
+                long price,
+                long discount,
+                long taxPercent,
+                long taxAmount,
+                long rowTotal
+        ) {
+            String[] values = {
+                    String.valueOf(index),
+                    description == null ? "" : description,
+                    String.valueOf(qty),
+                    money(price),
+                    money(discount),
+                    String.valueOf(taxPercent),
+                    money(taxAmount),
+                    money(rowTotal)
+            };
+
+            drawTableRow(values, false);
+        }
+
+        private void drawTableRow(String[] values, boolean isHeader) {
+            StaticLayout[] layouts = new StaticLayout[values.length];
+            float rowHeight = isHeader ? 42f : 34f;
+
+            for (int i = 0; i < values.length; i++) {
+                layouts[i] = makeRtlCellLayout(
+        values[i],
+        columnWidths[i] - 8f,
+        isHeader ? 8f : 9f,
+        isHeader
+);
+                );
+                rowHeight = Math.max(
+                        rowHeight,
+                        layouts[i].getHeight() + 10f
+                );
+            }
+
+            if (!isHeader && y + rowHeight > 785f) {
+                newPage();
+                drawTableHeader();
+            }
+
+            Paint cellPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            cellPaint.setColor(Color.BLACK);
+            cellPaint.setStyle(Paint.Style.STROKE);
+            cellPaint.setStrokeWidth(isHeader ? 1.1f : 0.8f);
 
             float cellRight = TABLE_RIGHT;
 
@@ -1050,4 +1327,4 @@ xFF34495E));
             );
         }
     }
-}
+    }
