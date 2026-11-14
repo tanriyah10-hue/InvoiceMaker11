@@ -495,20 +495,18 @@ public class MainActivity extends Activity {
     }
 
     private String displayDate(Calendar date) {
-
-        return new SimpleDateFormat(
-                "yyyy/MM/dd",
-                Locale.US
-        ).format(date.getTime());
-    }
+    return JalaliDate.format(date, "/");
+}
 
     private String databaseDate(Calendar date) {
+    return JalaliDate.format(date, "-");
+}
 
-        return new SimpleDateFormat(
-                "yyyy-MM-dd",
-                Locale.US
-        ).format(date.getTime());
-    }
+    private String dateFromTimestamp(long timestamp) {
+    Calendar date = Calendar.getInstance();
+    date.setTimeInMillis(timestamp);
+    return JalaliDate.format(date, "/");
+}
 
     private String selectedDocumentType() {
 
