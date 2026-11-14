@@ -1217,13 +1217,7 @@ public class MainActivity extends Activity {
         cursor.close();
     }
 
-    private String dateFromTimestamp(long timestamp) {
-
-        return new SimpleDateFormat(
-                "yyyy/MM/dd",
-                Locale.US
-        ).format(new Date(timestamp));
-    }
+    
 
     // ساخت PDF
     private void makePdf(long id) {
